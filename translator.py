@@ -1,62 +1,53 @@
-import speech_recognition as sr
+ import speech_recognition as sr
 from googletrans import Translator
-from gtts import gTTS
-import os
-import threading
 from queue import Queue
+import threading
 
-# Global flag and queue for controlling and transferring data
+# Global variables
 recording = False
 output_queue = Queue()  # Queue to hold recognized and translated text for the Kivy app
+translator = Translator()
+recognizer = sr.Recognizer()
 
-def recognize_speech(target_language='es'):
-    global recording
-    recognizer = sr.Recognizer()
-    recognizer.energy_threshold = 300  # Adjust as needed
-    recognizer.dynamic_energy_threshold = False  # Fixed threshold to avoid calibration issues
-
-    with sr.Microphone() as source:
-        print("Listening... Speak continuously, and press 'Stop Recording' to end.")
-
-        while recording:
-            try:
-                # Listen to a phrase, then process and translate it
-                audio = recognizer.listen(source, timeout=None, phrase_time_limit=5)  # Adjust as needed
-                text = recognizer.recognize_google(audio)
-                if not text.strip():
-                    raise ValueError("No valid input detected.")
-                print(f"You said: {text}")
-
-                # Translate and store the detected phrase
-                translated_text = translate_text(text, target_language)
-                output_queue.put((text, translated_text))  # Send both texts to the main app
-
-            except sr.UnknownValueError:
-                print("Sorry, I didn't catch that.")
-                output_queue.put(("No speech detected", ""))
-            except sr.RequestError as e:
-                print(f"Speech recognition failed: {e}")
-                output_queue.put(("Recognition error", ""))
-                break
-            except ValueError as e:
-                print(e)
-                output_queue.put(("No valid input", ""))
-
-def translate_text(text, target_lang='es'):
-    translator = Translator()
-    try:
-        translation = translator.translate(text, dest=target_lang)
-        print(f"Translated to: {translation.text}")
-        return translation.text
-    except Exception as e:
-        print(f"Translation failed: {e}")
-        return "Translation error"
-
-def start_recording(target_language='es'):
+def start_recording(target_language):
     global recording
     recording = True
-    threading.Thread(target=recognize_speech, args=(target_language,)).start()
+    print("Recording started...")
+
+    # Use a separate thread for non-blocking recording
+    def record_and_translate():
+        with sr.Microphone() as source:
+            recognizer.adjust_for_ambient_noise(source)
+            print("Microphone ready.")
+            while recording:
+                try:
+                    print("Listening...")
+                    audio = recognizer.listen(source, timeout=5)
+                    original_text = recognizer.recognize_google(audio)
+                    print(f"Original: {original_text}")
+                    translated_text = translate_text(original_text, target_language)
+                    output_queue.put((original_text, translated_text))
+                    print(f"Translated: {translated_text}")
+                except sr.UnknownValueError:
+                    print("Could not understand audio")
+                    output_queue.put(("No speech detected", ""))
+                except sr.WaitTimeoutError:
+                    print("Timeout reached, no speech detected")
+                except Exception as e:
+                    print(f"Error during speech recognition: {e}")
+                    output_queue.put(("Recognition error", ""))
+
+    threading.Thread(target=record_and_translate, daemon=True).start()
 
 def stop_recording():
     global recording
     recording = False
+    print("Recording stopped.")
+
+def translate_text(text, target_language):
+    try:
+        result = translator.translate(text, dest=target_language)
+        return result.text
+    except Exception as e:
+        print(f"Error in translation: {e}")
+        return "Translation error"
