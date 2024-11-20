@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Translator App
+Comment=Click to open the Translator Application
+Exec=/usr/bin/python3 /home/pi/translator_project1/main.py
+Icon=/home/pi/translator_project1/icon.png
+Terminal=false
+Type=Application
+Categories=Utility;
