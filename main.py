@@ -5,16 +5,16 @@ from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.label import Label
 from kivy.clock import Clock
-import translator
+import translator  # Import the translator module
 import threading
-from queue import Empty
 from googletrans import LANGUAGES
 from kivy.core.window import Window
 from playsound import playsound
 import os
 from kivy.uix.dropdown import DropDown
-# Ensure proper window configuration for Raspberry Pi
-Window.size = (800, 480)  # Set resolution for Raspberry Pi screen
+
+# Configure window properties for Raspberry Pi or standard screen
+Window.size = (800, 480)
 Window.fullscreen = False
 Window.clearcolor = (0.9, 0.9, 0.95, 1)
 
@@ -24,10 +24,10 @@ class RootWidget(BoxLayout):
         self.orientation = 'vertical'
         self.spacing = 5
         self.padding = [10, 10, 10, 10]
-        self.selected_language = 'es'
+        self.selected_language = 'es'  # Default language is Spanish
 
-        # Scrollable Layout
-        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        # Scrollable layout
+        scroll_view = ScrollView(size_hint=(1, None), size=(800, 480))
         content = BoxLayout(orientation='vertical', size_hint_y=None)
         content.bind(minimum_height=content.setter('height'))
 
@@ -58,7 +58,8 @@ class RootWidget(BoxLayout):
         )
         self.language_button.bind(on_release=self.language_dropdown.open)
         content.add_widget(self.language_button)
-         # Input and Translation Labels
+
+        # Input and Translation Labels
         self.input_label = Label(
             text="Original input will appear here.",
             size_hint=(1, None),
@@ -89,15 +90,17 @@ class RootWidget(BoxLayout):
         scroll_view.add_widget(content)
         self.add_widget(scroll_view)
 
-        # Check queue for new translations
+        # Schedule a clock to check the queue for new translations
         Clock.schedule_interval(self.update_texts_from_queue, 0.5)
 
     def select_language(self, lang_code, lang_name):
+        """Select a language for translation."""
         self.selected_language = lang_code
         self.language_button.text = f"Language: {lang_name}"
         self.language_dropdown.dismiss()
 
     def toggle_recording(self, instance):
+        """Start or stop the recording and translation process."""
         if not translator.recording:
             self.record_button.text = 'Stop Recording'
             threading.Thread(target=translator.start_recording, args=(self.selected_language,), daemon=True).start()
@@ -106,6 +109,7 @@ class RootWidget(BoxLayout):
             translator.stop_recording()
 
     def update_texts_from_queue(self, dt):
+        """Update the displayed texts from the translator's output queue."""
         try:
             while not translator.output_queue.empty():
                 original_text, translated_text = translator.output_queue.get_nowait()
@@ -114,7 +118,9 @@ class RootWidget(BoxLayout):
                 self.play_translated_audio(translated_text, self.selected_language)
         except Exception as e:
             print(f"Error updating texts: {e}")
+
     def play_translated_audio(self, text, lang):
+        """Play the translated text as audio."""
         try:
             tts = gTTS(text=text, lang=lang)
             audio_file = "/tmp/translated_audio.mp3"
@@ -128,5 +134,5 @@ class TranslatorApp(App):
         return RootWidget()
 
 if __name__ == '__main__':
-    os.environ["DISPLAY"] = ":0"
+    os.environ["DISPLAY"] = ":0"  # Necessary for Raspberry Pi
     TranslatorApp().run()
