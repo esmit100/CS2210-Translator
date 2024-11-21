@@ -5,9 +5,10 @@ import threading
 
 # Global variables
 recording = False
-output_queue = Queue()  # Queue to hold recognized and translated text for the Kivy app
+output_queue = Queue()  # Queue to hold recognized and translated text
 translator = Translator()
 recognizer = sr.Recognizer()
+
 
 def start_recording(target_language):
     """
@@ -52,6 +53,7 @@ def start_recording(target_language):
 
     threading.Thread(target=record_and_translate, daemon=True).start()
 
+
 def stop_recording():
     """
     Stops the recording process by setting the global `recording` flag to False.
@@ -59,6 +61,7 @@ def stop_recording():
     global recording
     recording = False
     print("Recording stopped.")
+
 
 def translate_text(text, target_language):
     """
