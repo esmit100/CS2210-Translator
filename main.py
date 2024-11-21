@@ -114,7 +114,7 @@ class RootWidget(BoxLayout):
                 self.play_translated_audio(translated_text, self.selected_language)
         except Exception as e:
             print(f"Error updating texts: {e}")
-            def play_translated_audio(self, text, lang):
+    def play_translated_audio(self, text, lang):
         try:
             tts = gTTS(text=text, lang=lang)
             audio_file = "/tmp/translated_audio.mp3"
